@@ -1,0 +1,68 @@
+<div class="container d-flex flex-column min-vh-100">
+  <section id="agendamento-section" class="container mb-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <div class="card shadow">
+          <div class="card-header bg-primary text-white">
+            <h3 class="mb-0">Agende seu Horário</h3>
+          </div>
+          <div class="card-body">
+            <form id="public-scheduling-form">
+              
+              <div class="mb-3">
+                <label class="form-label">Nome Completo</label>
+                <input type="text" class="form-control" required>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" required>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Telefone</label>
+                <input type="tel" class="form-control" required>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Serviço</label>
+                <select class="form-select" id="service-select" required>
+                  <option value="">Selecione um serviço</option>
+                  <option value="corte">Corte de Cabelo</option>
+                  <option value="coloracao">Coloração</option>
+                  <option value="escova">Escova</option>
+                  <option value="manicure">Manicure</option>
+                  <option value="pedicure">Pedicure</option>
+                </select>
+              </div>
+
+              <div class="mb-3 row">
+                <!-- Campo de Data -->
+                <div class="col-md-6">
+                  <label class="form-label">Data</label>
+                  <div class="input-group">
+                    <input type="date" class="form-control" id="date-select" required>
+                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                  </div>
+                </div>
+
+                <!-- Campo de Horário -->
+                <div class="col-md-6">
+                  <label class="form-label">Horários Disponíveis</label>
+                  <select id="time-select" class="form-select" required>
+                    <option value="">Selecione um horário</option>
+                  </select>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-100">Agendar</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Rodapé sempre no final -->
+ 
+</div>

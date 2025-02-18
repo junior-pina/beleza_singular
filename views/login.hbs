@@ -1,0 +1,25 @@
+{{! login.hbs }}
+
+{{#> main isLoginPage=true }}
+
+<section class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+  <div class="card shadow p-4" style="max-width: 400px; width: 100%;">
+    <h3 class="text-center text-danger">Login</h3>
+    <form>
+      <div class="mb-3">
+        <label class="form-label">E-mail</label>
+        <input type="email" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Senha</label>
+        <input type="password" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-danger w-100">Entrar</button>
+      <p class="text-center mt-3">
+        Ainda não tem uma conta? <a href="/cadastro" class="text-danger fw-bold">Cadastre-se</a>
+      </p>
+    </form>
+  </div>
+</section>
+
+{{/main}}
