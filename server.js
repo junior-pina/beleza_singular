@@ -7,19 +7,14 @@ const cors = require('cors');
 const path = require('path');
 const exphbs = require('express-handlebars');
 const sequelize = require('./config/database');
+
+// ✅ Importar Middlewares
 const authMiddleware = require('./middleware/auth');
 
-
-// ✅ Importar rotas
-const authRoutes = require('./routes/auth');
-const clientRoutes = require('./routes/clients');
-const appointmentRoutes = require('./routes/appointments');
-const viewRoutes = require('./routes/viewsRoutes');
-const cadastroRoutes = require('./routes/cadastro'); // Importar cadastro
-
+// ✅ Criar o app Express
 const app = express();
 
-// ✅ Configurar Handlebars como motor de visualização
+// ✅ Configuração do Handlebars como motor de visualização
 app.engine('hbs', exphbs.engine({
     extname: 'hbs',
     defaultLayout: 'main',
@@ -30,17 +25,9 @@ app.set('views', path.join(__dirname, 'views'));
 // ✅ Middleware para processar JSON e formulários
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/api/clients', authMiddleware, clientRoutes);
 
-
-// ✅ Middleware CORS (permitir requisições de origens diferentes)
+// ✅ Middleware CORS (permite requisições externas)
 app.use(cors());
-
-// ✅ Servir arquivos estáticos
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
-app.use('/js', express.static(path.join(__dirname, 'public', 'js')));
-app.use('/img', express.static(path.join(__dirname, 'public', 'img')));
 
 // ✅ Configuração da sessão
 app.use(session({
@@ -50,18 +37,37 @@ app.use(session({
   cookie: { maxAge: 1000 * 60 * 60 * 24 } // 24 horas
 }));
 
-// ✅ Rotas API
-app.use('/api/auth', authRoutes);
-app.use('/api/clients', clientRoutes);
+// ✅ Servir arquivos estáticos
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/css', express.static(path.join(__dirname, 'public', 'css')));
+app.use('/js', express.static(path.join(__dirname, 'public', 'js')));
+app.use('/img', express.static(path.join(__dirname, 'public', 'img')));
+
+// ✅ Importar e usar rotas corretamente
+const authRoutes = require('./routes/auth'); // Importação corrigida
+const clientRoutes = require('./routes/clients');
+const appointmentRoutes = require('./routes/appointments');
+const viewRoutes = require('./routes/viewsRoutes');
+const cadastroRoutes = require('./routes/cadastro');
+const horariosRoutes = require("./routes/horariosRoutes");
+
+app.use('/api/auth', authRoutes); // Agora corretamente configurado
+app.use('/api/clients', authMiddleware, clientRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/cadastro', cadastroRoutes);
+app.use('/api/horarios', horariosRoutes); // Corrigida a rota para incluir `/api/`
 
-// ✅ Rota de cadastro
-app.use('/cadastro', cadastroRoutes); 
+app.use('/', viewRoutes); // Home e outras views
 
-// ✅ Rotas Views (Handlebars)
-app.use('/', viewRoutes);
+// ✅ Middleware para tratar erros 404 (rota não encontrada)
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: 'Rota não encontrada'
+  });
+});
 
-// ✅ Middleware de erro (tratamento de erros globais)
+// ✅ Middleware de erro global (tratamento de erros inesperados)
 app.use((err, req, res, next) => {
   console.error('🚨 Erro detectado:', err.stack);
   res.status(500).json({
@@ -72,15 +78,30 @@ app.use((err, req, res, next) => {
 
 // ✅ Função para iniciar o servidor
 async function startServer() {
-    try {
-        await sequelize.sync({ alter: true }); // ⚠️ Atualiza tabelas sem perder dados
-        console.log('✅ Banco de dados sincronizado!');
-        
-        const PORT = process.env.PORT || 4000;
-        app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
-    } catch (error) {
-        console.error('❌ Erro ao conectar ao banco:', error);
-    }
+  try {
+    await sequelize.authenticate();
+    console.log('✅ Conexão com o banco de dados bem-sucedida!');
+    
+    await sequelize.sync({ alter: true }); // ⚠️ Atualiza tabelas sem perder dados
+    console.log('✅ Banco de dados sincronizado!');
+    
+    const PORT = process.env.PORT || 4000;
+
+    // Verifica se a porta já está em uso antes de iniciar o servidor
+    app.listen(PORT, () => {
+      console.log(`🚀 Servidor rodando na porta ${PORT}`);
+    }).on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`❌ Erro: A porta ${PORT} já está em uso. Escolha outra porta.`);
+      } else {
+        console.error('❌ Erro ao iniciar o servidor:', err);
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao conectar ao banco:', error);
+  }
 }
 
+// ✅ Iniciar o servidor
 startServer();

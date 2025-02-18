@@ -1,112 +1,150 @@
 const express = require('express');
 const router = express.Router();
+const { Op } = require('sequelize');
 const Appointment = require('../models/Appointment');
 const Client = require('../models/Cliente');
 const auth = require('../middleware/auth');
 
-// Get all appointments
+// 📌 Lista todos os agendamentos
 router.get('/', auth, async (req, res) => {
   try {
     const appointments = await Appointment.findAll({
       include: [Client],
-      order: [['date', 'ASC']]
+      order: [['date', 'ASC']],
     });
     res.json(appointments);
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Erro ao buscar agendamentos:', err);
+    res.status(500).json({ message: 'Erro ao buscar agendamentos' });
   }
 });
 
-// Create appointment
+// 📌 Cria um novo agendamento
 router.post('/', auth, async (req, res) => {
   try {
-    const appointment = await Appointment.create(req.body);
+    const { clientId, service, date, time } = req.body;
+
+    if (!clientId || !service || !date || !time) {
+      return res.status(400).json({ message: 'Todos os campos são obrigatórios' });
+    }
+
+    // Verifica se o horário já está ocupado
+    const horarioExistente = await Appointment.findOne({
+      where: { date, time },
+    });
+
+    if (horarioExistente) {
+      return res.status(400).json({ message: 'Horário já está ocupado!' });
+    }
+
+    const appointment = await Appointment.create({ clientId, service, date, time });
+
     res.status(201).json(appointment);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error('Erro ao criar agendamento:', err);
+    res.status(400).json({ message: 'Erro ao criar agendamento' });
   }
 });
 
-// Update appointment
+// 📌 Atualiza um agendamento existente
 router.put('/:id', auth, async (req, res) => {
   try {
+    const { service, date, time } = req.body;
     const appointment = await Appointment.findByPk(req.params.id);
+
     if (!appointment) {
-      return res.status(404).json({ message: 'Appointment not found' });
+      return res.status(404).json({ message: 'Agendamento não encontrado' });
     }
-    await appointment.update(req.body);
+
+    await appointment.update({ service, date, time });
     res.json(appointment);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error('Erro ao atualizar agendamento:', err);
+    res.status(400).json({ message: 'Erro ao atualizar agendamento' });
   }
 });
 
-// Delete appointment
+// 📌 Deleta um agendamento
 router.delete('/:id', auth, async (req, res) => {
   try {
     const appointment = await Appointment.findByPk(req.params.id);
     if (!appointment) {
-      return res.status(404).json({ message: 'Appointment not found' });
+      return res.status(404).json({ message: 'Agendamento não encontrado' });
     }
+
     await appointment.destroy();
-    res.json({ message: 'Appointment deleted' });
+    res.json({ message: 'Agendamento deletado' });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Erro ao deletar agendamento:', err);
+    res.status(500).json({ message: 'Erro ao deletar agendamento' });
   }
 });
 
-// Get available times
+// 📌 Obtém horários disponíveis para uma data e serviço
 router.get('/available', async (req, res) => {
   try {
     const { date, service } = req.query;
-    
-    // Get all appointments for the requested date
+    if (!date || !service) {
+      return res.status(400).json({ message: 'Data e serviço são obrigatórios' });
+    }
+
+    // Buscar horários já agendados
     const busyTimes = await Appointment.findAll({
-      where: {
-        date,
-        service
-      },
-      attributes: ['time']
+      where: { date, service },
+      attributes: ['time'],
     });
 
-    // Define business hours
-    const businessHours = [
-      '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'
-    ];
+    const busyTimesList = busyTimes.map((apt) => apt.time);
 
-    // Filter out busy times
-    const busyTimesList = busyTimes.map(apt => apt.time);
-    const availableTimes = businessHours.filter(time => !busyTimesList.includes(time));
+    // Horários padrão do salão
+    const businessHours = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
+
+    // Retorna apenas os horários que ainda estão disponíveis
+    const availableTimes = businessHours.filter((time) => !busyTimesList.includes(time));
 
     res.json(availableTimes);
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Erro ao buscar horários disponíveis:', err);
+    res.status(500).json({ message: 'Erro ao buscar horários disponíveis' });
   }
 });
 
-// Public appointment creation
+// 📌 Criar um agendamento público (sem login)
 router.post('/public', async (req, res) => {
   try {
-    // First create or find the client
+    const { name, email, phone, service, date, time } = req.body;
+
+    if (!name || !email || !phone || !service || !date || !time) {
+      return res.status(400).json({ message: 'Todos os campos são obrigatórios' });
+    }
+
+    // Criar ou buscar cliente
     const [client] = await Client.findOrCreate({
-      where: { email: req.body.email },
-      defaults: {
-        name: req.body.name,
-        phone: req.body.phone
-      }
+      where: { email },
+      defaults: { name, phone },
     });
 
-    // Then create the appointment
+    // Verifica se o horário já está ocupado
+    const horarioExistente = await Appointment.findOne({
+      where: { date, time },
+    });
+
+    if (horarioExistente) {
+      return res.status(400).json({ message: 'Horário já está ocupado!' });
+    }
+
+    // Criar agendamento
     const appointment = await Appointment.create({
       clientId: client.id,
-      service: req.body.service,
-      date: req.body.date,
-      time: req.body.time
+      service,
+      date,
+      time,
     });
 
     res.status(201).json(appointment);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error('Erro ao criar agendamento público:', err);
+    res.status(400).json({ message: 'Erro ao criar agendamento' });
   }
 });
 
