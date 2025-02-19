@@ -23,25 +23,30 @@ router.post('/cadastro', [
         // 🔍 Garantindo que o e-mail seja tratado corretamente
         email = email.trim().toLowerCase();
 
+        console.log("📧 Email recebido:", email);
+        console.log("🔑 Senha recebida:", senha);
+
         // 🔍 Verifica se o usuário já existe no banco de dados
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
+            console.log("❌ Usuário já existe no banco:", email);
             return res.status(400).json({ success: false, message: 'Usuário já cadastrado!' });
         }
 
         // 🔑 Hash da senha antes de salvar no banco
-        const hashedPassword = await bcrypt.hash(senha, 10); // 🔥 Sem gerar salt manualmente
-        console.log("✅ Senha hashada antes de salvar no banco:", hashedPassword);
+        const hashedPassword = await bcrypt.hash(senha, 12); // 🔥 Sem gerar salt manualmente
+        console.log("🔒 Senha hasheada antes de salvar:", hashedPassword);
 
         // ✅ Criar um novo usuário no banco
-        await User.create({
+        const newUser = await User.create({
             nome,
             email,
             telefone,
             senha: hashedPassword // 🔥 Senha sempre criptografada
         });
 
-        console.log("✅ Usuário cadastrado com sucesso:", email);
+        console.log("✅ Usuário cadastrado com sucesso:", newUser.email);
+        console.log("🗄️ Senha salva no banco (hasheada):", newUser.senha);
 
         // ✅ Resposta JSON para frontend
         res.status(201).json({ success: true, message: 'Usuário cadastrado com sucesso!' });
